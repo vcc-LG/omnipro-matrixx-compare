@@ -17,3 +17,7 @@
 # Pycharm files #
 #################
 *.idea
+
+# Venv #
+########
+venv/
