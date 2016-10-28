@@ -1,0 +1,19 @@
+# Don't include my data! #
+##########################
+*.opg
+
+# Compiled py files #
+#####################
+*.pyc
+
+# Saved output images #
+#######################
+*.png
+
+# Databases #
+#############
+*.db
+
+# Pycharm files #
+#################
+*.idea

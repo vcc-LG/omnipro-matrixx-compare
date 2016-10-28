@@ -1,8 +1,9 @@
-import functools
+import datetime
+import getopt
+import sys
+
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
-import sys, getopt
 
 
 class OpgData(object):
@@ -119,52 +120,28 @@ def compare_opg_data(baseline, measurement):
     return None
 
 
-# def main():
-#
-#     baseline_file = ''
-#     measurement_file = ''
-#     try:
-#         opts, args = getopt.getopt(argv, "hb:m:", ["bfile=", "mfile="])
-#     except getopt.GetoptError:
-#         print('matrixx_compare.py -b <baselinefile> -m <measurementfile>')
-#         sys.exit(2)
-#     for opt, arg in opts:
-#         if opt == '-h':
-#             print('matrixx_compare.py -b <baselinefile> -m <measurementfile>')
-#             sys.exit()
-#         elif opt in ("-b", "--bfile"):
-#             baseline_file = arg
-#         elif opt in ("-m", "--mfile"):
-#             measurement_file = arg
-#
-#     base_opg = OpgData(opg_path=baseline_file)
-#     meas_opg = OpgData(opg_path=measurement_file)
-#     compare_opg_data(base_opg, meas_opg)
-#
-#
-# if __name__ == "__main__":
-#     main(sys.argv[1:])
+def main(argv):
 
-base_opg = OpgData(opg_path=r"C:\Users\le165208\githubprojects\omnipro-matrixx-compare\data\raw\la2_6fff_matrixx.opg")
-meas_opg = OpgData(opg_path=r"C:\Users\le165208\githubprojects\omnipro-matrixx-compare\data\raw\la2_10fff_matrixx.opg")
-compare_opg_data(base_opg, meas_opg)
+    baseline_file = ''
+    measurement_file = ''
+    try:
+        opts, args = getopt.getopt(argv, "hb:m:", ["bfile=", "mfile="])
+    except getopt.GetoptError:
+        print('matrixx_compare.py -b <baselinefile> -m <measurementfile>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('matrixx_compare.py -b <baselinefile> -m <measurementfile>')
+            sys.exit()
+        elif opt in ("-b", "--bfile"):
+            baseline_file = arg
+        elif opt in ("-m", "--mfile"):
+            measurement_file = arg
 
-# input_file_path = r'data\\raw\\'
-# output_file_path = r'data\\output\\'
-# database_file_path = r'db\\'
-# database_file_name = 'profile_database.db'
-# database_full_path = os.path.join(database_file_path, database_file_name)
-#
-# full_path = r"C:\Users\le165208\githubprojects\omnipro-matrixx-compare\data\raw\la2_6fff_matrixx.opg"
-# base_opg = OpgData(opg_path=full_path)
-#
-# full_path = r"C:\Users\le165208\githubprojects\omnipro-matrixx-compare\data\raw\la2_10fff_matrixx.opg"
-# meas_opg = OpgData(opg_path=full_path)
-#
-# compare_opg_data(base_opg, meas_opg)
+    base_opg = OpgData(opg_path=baseline_file)
+    meas_opg = OpgData(opg_path=measurement_file)
+    compare_opg_data(base_opg, meas_opg)
 
 
-#
-# for file_name in os.listdir(input_file_path):
-#     if file_name.endswith(".opg"):
-#         read_opg(input_file_path, file_name, output_file_path, database_full_path)
+if __name__ == "__main__":
+    main(sys.argv[1:])
