@@ -1,17 +1,36 @@
+"""A command line interface to compare two OmniPro Matrixx ASCII files
+
+Example:
+        The program is called from within its directory. The -b parameter indicates the following path is to the
+        baseline data. The -m is for measured (i.e. QA) data.
+
+        > python matrixx_compare.py -b data\raw\la2)baseline.opg -m data\raw\la2_2016.opg
+
+"""
+
 import datetime
 import getopt
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import UnivariateSpline
+from tabulate import tabulate
 
 
 class OpgData(object):
+    """
+    Class to hold data from .opg file
+    """
+
     def __init__(self, opg_path):
         self.opg_path = opg_path
         self.x_cm, self.y_cm, self.pixel_data = self.parse_data()
 
     def parse_data(self):
+        """
+        Read in data from .opg file
+        """
         with open(self.opg_path, "r") as ins:
             all_data = []
             for line in ins:
@@ -27,6 +46,9 @@ class OpgData(object):
         return x_cm, y_cm, pixel_data
 
     def plot_data(self):
+        """
+        Quick and dirty plot of data
+        """
         plt.figure()
         plt.scatter(self.x_cm, self.pixel_data[round(len(self.pixel_data) / 2)])
         plt.title('Matrixx plot - x', fontsize=40)
@@ -37,9 +59,11 @@ class OpgData(object):
         plt.show()
 
 
-def make_save_plot(baseline,measurement,dimension):
-
-    time_stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+def make_save_plot(baseline, measurement, dimension):
+    """
+    Function to normalise, interpolate, plot and save data
+    """
+    time_stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')  # timestamp output file
     time_stamp_dir = time_stamp
     time_stamp_dir = time_stamp_dir.replace(' ', '_')
     time_stamp_dir = time_stamp_dir.replace(':', '')
@@ -55,12 +79,22 @@ def make_save_plot(baseline,measurement,dimension):
     elif dimension == 'y':
         baseline_norm = normalise_plot([x[round(len(baseline.pixel_data[0]) / 2)] for x in baseline.pixel_data[:-1]])
         baseline_horz = baseline.y_cm
-        measurement_norm = normalise_plot([x[round(len(measurement.pixel_data[0]) / 2)] for x in measurement.pixel_data[:-1]])
+        measurement_norm = normalise_plot(
+            [x[round(len(measurement.pixel_data[0]) / 2)] for x in measurement.pixel_data[:-1]])
         measurement_horz = measurement.y_cm
         fig_title = "Matrixx measurement vs. baseline - y"
         fig_output_dir = r'output\\' + time_stamp_dir + '_y.png'
 
+    spline_interpolation = UnivariateSpline(measurement_horz,
+                                            np.array(measurement_norm) - 20)  # Interpolate to 20 % field width
+    roots_out = spline_interpolation.roots()
+    r1, r2 = roots_out[::len(roots_out) - 1]
+
     percentage_diff = [100 * ((x / y) - 1) for x, y in zip(baseline_norm, measurement_norm)]
+    percentage_diff_np = np.array(percentage_diff)
+
+    """Return % diff values between 20 % bounds"""
+    percentage_diff_np = percentage_diff_np[np.where((np.array(baseline_horz) >= r1) & (np.array(baseline_horz) <= r2))]
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -69,6 +103,9 @@ def make_save_plot(baseline,measurement,dimension):
     ax2.plot(baseline_horz, percentage_diff, '--k')
     ax2.plot(baseline_horz, [-2] * len(baseline_horz), '-g')
     ax2.plot(baseline_horz, [2] * len(baseline_horz), '-g')
+
+    ax2.axvline(r1, color='b', linestyle='--')
+    ax2.axvline(r2, color='b', linestyle='--')
 
     ax1.set_title(fig_title, fontsize=40)
     ax1.set_xlabel("Position (cm)", fontsize=40)
@@ -92,38 +129,50 @@ def make_save_plot(baseline,measurement,dimension):
     ax2.set_ylim([-12, 12])
     fig.set_size_inches(20, 10)
     plt.savefig(fig_output_dir)
-    print("Figures saved to: %s" % fig_output_dir)
-    return percentage_diff
+    return percentage_diff_np, fig_output_dir
 
 
 def normalise_plot(input_data):
+    """
+    Normalise to max value
+    """
     return [100 * (float(i) / max(input_data)) for i in input_data]
 
 
 def compare_opg_data(baseline, measurement):
-    percentage_diff_x = make_save_plot(baseline, measurement, dimension='x')
-    percentage_diff_y = make_save_plot(baseline, measurement, dimension='y')
+    """
+    Calculate and display useful difference metrics
+    """
+    percentage_diff_x, fig_output_dir_x = make_save_plot(baseline, measurement, dimension='x')
+    percentage_diff_y, fig_output_dir_y = make_save_plot(baseline, measurement, dimension='y')
 
-    percentage_diff_x_np = np.array(percentage_diff_x)
-    percentage_diff_y_np = np.array(percentage_diff_y)
+    percentage_diff_x_mean = np.around(np.mean(percentage_diff_x), decimals=3)
+    percentage_diff_y_mean = np.around(np.mean(percentage_diff_y), decimals=3)
 
-    percentage_diff_x_mean = np.around(np.mean(percentage_diff_x_np), decimals=3)
-    percentage_diff_y_mean = np.around(np.mean(percentage_diff_y_np), decimals=3)
+    max_diff_x = np.around(np.max(percentage_diff_x), decimals=3)
+    max_diff_y = np.around(np.max(percentage_diff_y), decimals=3)
 
-    print("Percentage x error = %.2f %%"%percentage_diff_x_mean)
-    print("Percentage y error = %.2f %%"%percentage_diff_y_mean)
+    print("\n" + tabulate([['Baseline', baseline.opg_path], ['Measurement', measurement.opg_path]],
+                          headers=['Input data', '']))
 
-    # percDiff_median = np.around(np.median(percDiff_np_nonan),decimals = 3)
-    # percDiff_range = np.around(np.ptp(percDiff_np_nonan, axis=0),decimals = 3)
-    # percDiff_max = np.around(np.max(percDiff_np_nonan),decimals = 3)
+    print("\n" + tabulate([['Results in central 80 % of profile:']]))
 
+    print("\n" + tabulate([["Average % difference - x", percentage_diff_x_mean],
+                           ["Average % difference - y", percentage_diff_y_mean],
+                           ["Maximum error (%) - x", max_diff_x],
+                           ["Maximum error (%) - y", max_diff_y]],
+                          headers=["Parameter", "Value"]))
+
+    print("\n" + tabulate([["x", fig_output_dir_x],
+                           ["y", fig_output_dir_y]],
+                          headers=["Figures saved to:", ""]))
     return None
 
 
 def main(argv):
-
     baseline_file = ''
     measurement_file = ''
+
     try:
         opts, args = getopt.getopt(argv, "hb:m:", ["bfile=", "mfile="])
     except getopt.GetoptError:
