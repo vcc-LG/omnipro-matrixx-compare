@@ -4,13 +4,14 @@ Example:
         The program is called from within its directory. The -b parameter indicates the following path is to the
         baseline data. The -m is for measured (i.e. QA) data.
 
-        > python matrixx_compare.py -b data\raw\la2)baseline.opg -m data\raw\la2_2016.opg
+        > python matrixx_compare.py -b data\raw\la2_10fff_matrixx.opg -m data\raw\la2_10fff_matrixx.opg
 
 """
 
 import datetime
 import getopt
 import sys
+import os.path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -187,10 +188,15 @@ def main(argv):
         elif opt in ("-m", "--mfile"):
             measurement_file = arg
 
-    base_opg = OpgData(opg_path=baseline_file)
-    meas_opg = OpgData(opg_path=measurement_file)
-    compare_opg_data(base_opg, meas_opg)
-
+    if os.path.isfile(baseline_file) and os.path.isfile(measurement_file):
+        meas_opg = OpgData(opg_path=measurement_file)
+        base_opg = OpgData(opg_path=baseline_file)
+        compare_opg_data(base_opg, meas_opg)
+    else:
+        if not os.path.isfile(baseline_file):
+            print("Error: Invalid baseline file path")
+        if not os.path.isfile(measurement_file):
+            print("Error: Invalid measurement file path")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
